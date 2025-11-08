@@ -12,9 +12,10 @@ export async function getBrowser() {
     });
   } else {
     // Production (Vercel)
+    // Don't pass any argument to executablePath()
     return await chromium.launch({
       args: chromiumPkg.args,
-      executablePath: await chromiumPkg.executablePath('/tmp/chromium'),
+      executablePath: await chromiumPkg.executablePath(), // Remove the '/tmp/chromium' argument
       headless: true,
     });
   }

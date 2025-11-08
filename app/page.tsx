@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -9,6 +9,17 @@ export default function Home() {
   const [error, setError] = useState("");
 
   const isRunningLocally = process.env.NODE_ENV === "development";
+
+  // Load cached data on mount
+  useEffect(() => {
+    const cachedUrl = localStorage.getItem("parodyUrl");
+    const cachedHtml = localStorage.getItem("parodyHtml");
+    
+    if (cachedUrl && cachedHtml) {
+      setUrl(cachedUrl);
+      setParodyHtml(cachedHtml);
+    }
+  }, []);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -29,6 +40,10 @@ export default function Home() {
       }
       const { parody_html } = await res.json();
       setParodyHtml(parody_html);
+      
+      // Cache the URL and HTML
+      localStorage.setItem("parodyUrl", url);
+      localStorage.setItem("parodyHtml", parody_html);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -80,7 +95,7 @@ export default function Home() {
           <iframe
             srcDoc={parodyHtml}
             className="w-full h-svh"
-            sandbox="allow-same-origin"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
         </div>
       )}

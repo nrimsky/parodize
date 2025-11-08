@@ -68,7 +68,7 @@ export default function Home() {
           disabled={loading || !url}
           className="text-xs sm:text-base bg-pink-600 text-white px-2 py-1 hover:bg-blue-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         >
-          {loading ? "thinkin'..." : "generate"}
+          {loading ? "workin'..." : "generate"}
         </button>
         {parodyHtml && (
           <button

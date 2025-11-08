@@ -2,6 +2,32 @@
 
 import { useState, useEffect } from "react";
 
+function normalizeURL(userInput: string): string {
+  // Trim whitespace
+  let url = userInput.trim();
+
+  // Return empty string if input is empty
+  if (!url) {
+    return "";
+  }
+
+  // Check if the URL already has a protocol
+  const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//i.test(url);
+
+  // If no protocol, prepend https://
+  if (!hasProtocol) {
+    url = "https://" + url;
+  }
+
+  // Validate the URL structure
+  try {
+    const urlObject = new URL(url);
+    return urlObject.href;
+  } catch (error) {
+    throw new Error("Invalid URL format");
+  }
+}
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,7 +40,7 @@ export default function Home() {
   useEffect(() => {
     const cachedUrl = localStorage.getItem("parodyUrl");
     const cachedHtml = localStorage.getItem("parodyHtml");
-    
+
     if (cachedUrl && cachedHtml) {
       setUrl(cachedUrl);
       setParodyHtml(cachedHtml);
@@ -33,14 +59,14 @@ export default function Home() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: normalizeURL(url) }),
       });
       if (!res.ok) {
         throw new Error("Failed to scrape website");
       }
       const { parody_html } = await res.json();
       setParodyHtml(parody_html);
-      
+
       // Cache the URL and HTML
       localStorage.setItem("parodyUrl", url);
       localStorage.setItem("parodyHtml", parody_html);
@@ -102,7 +128,9 @@ export default function Home() {
 
       {!parodyHtml && !error && (
         <div className="p-2 text-xs sm:text-base text-gray-500">
-          {loading ? "🔨 working on your site... (this might take a few minutes)" : 'enter a url and click "generate" to create a parody'}
+          {loading
+            ? "🔨 working on your site... (this might take a few minutes)"
+            : 'enter a url and click "generate" to create a parody'}
         </div>
       )}
     </div>

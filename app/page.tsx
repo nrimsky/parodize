@@ -8,43 +8,27 @@ export default function Home() {
   const [parodyHtml, setParodyHtml] = useState("");
   const [error, setError] = useState("");
 
+  const isRunningLocally = process.env.NODE_ENV === "development";
+
   const handleGenerate = async () => {
     setLoading(true);
     setError("");
     setParodyHtml("");
 
     try {
-      // Step 1: Scrape website
-      const scrapeRes = await fetch("/api/scrape", {
+      let endpoint = isRunningLocally
+        ? "http://127.0.0.1:8000/api/parody"
+        : "https://projects.panickssery.com/api/parody";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-
-      if (!scrapeRes.ok) {
+      if (!res.ok) {
         throw new Error("Failed to scrape website");
       }
-
-      const { data: styleData } = await scrapeRes.json();
-
-      // Step 2: Generate parody
-      const parodyRes = await fetch("/api/generate-parody", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ styleData }),
-      });
-
-      if (!parodyRes.ok) {
-        throw new Error("Failed to generate parody");
-      }
-
-      const { html } = await parodyRes.json();
-      // if html starts with ```html and ends with ```, remove those
-      const cleanedHtml = html
-        .replace(/^```html/, "")
-        .replace(/```$/, "")
-        .trim();
-      setParodyHtml(cleanedHtml);
+      const { parody_html } = await res.json();
+      setParodyHtml(parody_html);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -103,7 +87,7 @@ export default function Home() {
 
       {!parodyHtml && !error && (
         <div className="p-2 text-xs sm:text-base text-gray-500">
-          enter a url and click "generate" to create a parody
+          {loading ? "🔨 working on your site... (this might take a few minutes)" : 'enter a url and click "generate" to create a parody'}
         </div>
       )}
     </div>

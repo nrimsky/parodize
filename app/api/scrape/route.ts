@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // Validate URL
     try {
       new URL(url);
     } catch {
@@ -26,23 +25,20 @@ export async function POST(request: NextRequest) {
     console.log('Opening page...');
     const page = await browser.newPage();
     
-    // Set user agent to avoid bot detection
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    );
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
     
     console.log('Navigating to URL...');
     await page.goto(url, { 
-      waitUntil: 'networkidle2', 
+      waitUntil: 'networkidle', 
       timeout: 30000 
     });
 
-    // Get the full rendered HTML
     const fullHtml = captureHtml ? await page.content() : null;
 
     console.log('Extracting styles...');
-    // Extract styling information
-    let styleData = await page.evaluate(() => {
+    const styleData = await page.evaluate(() => {
       const getComputedStyles = (selector: string) => {
         const element = document.querySelector(selector);
         if (!element) return null;
@@ -58,11 +54,9 @@ export async function POST(request: NextRequest) {
         };
       };
 
-      // Extract colors from various elements
       const colors = new Set<string>();
       const fonts = new Set<string>();
       
-      // Sample elements instead of all to avoid performance issues
       const elements = Array.from(document.querySelectorAll('body, header, nav, main, footer, h1, h2, h3, p, a, button'));
       
       elements.forEach((el) => {
@@ -78,13 +72,11 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Get main headings
       const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
         .slice(0, 5)
         .map(h => h.textContent?.trim())
         .filter(Boolean);
 
-      // Get meta description
       const metaDesc = document.querySelector('meta[name="description"]');
 
       return {
@@ -102,15 +94,12 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Add the full HTML to the result
-    if (captureHtml) {
-      styleData = { ...styleData, fullHtml } as any;
-    }
+    const result = captureHtml ? { ...styleData, fullHtml } : styleData;
 
     console.log('Closing browser...');
     await browser.close();
 
-    return NextResponse.json({ success: true, data: styleData });
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('Scraping error:', error);
     

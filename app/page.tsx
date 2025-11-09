@@ -59,7 +59,7 @@ export default function Home() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizeURL(url) }),
+        body: JSON.stringify({ url: normalizeURL(url), model: "claude" }),
       });
       if (!res.ok) {
         throw new Error("Failed to scrape website");

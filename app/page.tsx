@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function normalizeURL(userInput: string): string {
@@ -29,7 +29,7 @@ function normalizeURL(userInput: string): string {
   }
 }
 
-export default function Home() {
+function HomeContent() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [parodyHtml, setParodyHtml] = useState("");
@@ -175,5 +175,13 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="p-2 text-xs sm:text-base text-gray-500">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

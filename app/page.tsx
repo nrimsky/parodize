@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function normalizeURL(userInput: string): string {
   // Trim whitespace
@@ -33,21 +34,36 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [parodyHtml, setParodyHtml] = useState("");
   const [error, setError] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const isRunningLocally = process.env.NODE_ENV === "development";
 
-  // Load cached data on mount
+  // Load from query params or cache on mount
   useEffect(() => {
-    const cachedUrl = localStorage.getItem("parodyUrl");
-    const cachedHtml = localStorage.getItem("parodyHtml");
+    const urlParam = searchParams.get("url");
+    
+    if (urlParam) {
+      // If URL is in query param, use it and auto-generate
+      const decodedUrl = decodeURIComponent(urlParam);
+      setUrl(decodedUrl);
+      // Auto-generate the parody
+      generateParody(decodedUrl);
+    } else {
+      // Otherwise, try to load from cache
+      const cachedUrl = localStorage.getItem("parodyUrl");
+      const cachedHtml = localStorage.getItem("parodyHtml");
 
-    if (cachedUrl && cachedHtml) {
-      setUrl(cachedUrl);
-      setParodyHtml(cachedHtml);
+      if (cachedUrl && cachedHtml) {
+        setUrl(cachedUrl);
+        setParodyHtml(cachedHtml);
+      }
     }
-  }, []);
+  }, [searchParams]);
 
-  const handleGenerate = async () => {
+  const generateParody = async (targetUrl: string) => {
     setLoading(true);
     setError("");
     setParodyHtml("");
@@ -59,7 +75,7 @@ export default function Home() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizeURL(url), model: "claude" }),
+        body: JSON.stringify({ url: normalizeURL(targetUrl), model: "claude" }),
       });
       if (!res.ok) {
         throw new Error("Failed to scrape website");
@@ -68,12 +84,29 @@ export default function Home() {
       setParodyHtml(parody_html);
 
       // Cache the URL and HTML
-      localStorage.setItem("parodyUrl", url);
+      localStorage.setItem("parodyUrl", targetUrl);
       localStorage.setItem("parodyHtml", parody_html);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    await generateParody(url);
+  };
+
+  const handleShareableLink = async () => {
+    try {
+      const encodedUrl = encodeURIComponent(url);
+      const shareableUrl = `${window.location.origin}${window.location.pathname}?url=${encodedUrl}`;
+      await navigator.clipboard.writeText(shareableUrl);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+      setError("Failed to copy link to clipboard");
     }
   };
 
@@ -91,7 +124,7 @@ export default function Home() {
         <button
           onClick={handleGenerate}
           disabled={loading || !url}
-          className="text-xs sm:text-base bg-pink-600 text-white px-2 py-1 hover:bg-blue-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+          className="text-xs sm:text-base bg-pink-600 text-white px-2 py-1 hover:bg-pink-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         >
           {loading ? "workin'..." : "generate"}
         </button>
@@ -99,15 +132,23 @@ export default function Home() {
           <button
             onClick={() => {
               const blob = new Blob([parodyHtml], { type: "text/html" });
-              const url = URL.createObjectURL(blob);
+              const blobUrl = URL.createObjectURL(blob);
               const a = document.createElement("a");
-              a.href = url;
+              a.href = blobUrl;
               a.download = "parody.html";
               a.click();
             }}
-            className="text-xs sm:text-base  bg-green-600 text-white px-2 py-1 hover:bg-green-700 disabled:opacity-50 cursor-pointer"
+            className="text-xs sm:text-base bg-sky-600 text-white px-2 py-1 hover:bg-sky-700 disabled:opacity-50 cursor-pointer"
           >
             download html
+          </button>
+        )}
+        {parodyHtml && (
+          <button
+            onClick={handleShareableLink}
+            className="text-xs sm:text-base bg-violet-600 text-white px-2 py-1 hover:bg-violet-700 disabled:opacity-50 cursor-pointer relative"
+          >
+            {copySuccess ? "✓ copied!" : "shareable link"}
           </button>
         )}
       </div>
